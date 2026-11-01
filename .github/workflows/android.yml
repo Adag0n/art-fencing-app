@@ -46,9 +46,11 @@ jobs:
 
     - name: Build with Buildozer (Safe Actions Mode)
       run: |
-        # Две строчки ниже принудительно отключают блокировку прав Linux в GitHub Actions
         export BUILDOZER_ALLOW_KIVY_BUILD_FROM_ROOT=1
         export _BUILDOZER_ALLOW_ROOT=1
+        # Отключаем графический движок Kivy во время компиляции
+        export KIVY_NO_ARGS=1
+        export KIVY_NO_CONSOLELOG=1
         buildozer -v android debug
 
     - name: Upload APK Artifact
