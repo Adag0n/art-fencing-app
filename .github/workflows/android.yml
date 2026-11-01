@@ -29,7 +29,7 @@ jobs:
         pip install buildozer cython==0.29.36
         pip install kivy
 
-    - name: Initialize and Configure Buildozer
+    - name: Initialize Buildozer
       run: |
         buildozer init
         sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.3.0,requests,urllib3,idna,certifi,charset-normalizer/g' buildozer.spec
@@ -38,10 +38,17 @@ jobs:
         sed -i 's/#android.ndk = 25b/android.ndk = 25b/g' buildozer.spec
         sed -i 's/android.archs = arm64-v8a armeabi-v7a/android.archs = arm64-v8a/g' buildozer.spec
 
+    - name: Accept Android Licenses Pre-emptively
+      run: |
+        mkdir -p /root/.android
+        touch /root/.android/repositories.cfg
+        # Принудительно генерируем одобренные лицензии в системную директорию Android SDK
+        mkdir -p /root/.buildozer/android/platform/android-sdk/licenses || true
+        yes | buildozer android licenses || true
+
     - name: Build with Buildozer
       run: |
         buildozer -v android debug
-
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
