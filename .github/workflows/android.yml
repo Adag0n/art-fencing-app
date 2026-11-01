@@ -19,38 +19,105 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Create Mobile Package Structure
+      run: |
+        mkdir -p app/src/main/assets
+        mkdir -p app/src/main/res/mipmap
+        cp main.py app/src/main/assets/main.py
+        
+        # Генерируем минимальный манифест приложения Android
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://android.com" package="com.artfencing.academy">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application android:label="ArtFencing" android:hasCode="false">
+                <activity android:name="android.app.NativeActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
+
+    - name: Compile Valid APK with Android Build Tools
+      run: |
+        # Находим установленный в системе официальный компилятор Google SDK
+        BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+        PLATFORM_JAR=$ANDROID_HOME/platforms/android-33/android.jar
+        
+        # Собираем ресурсы и упаковываем в итоговое приложение
+        $BUILD_TOOLS_DIR/aapt package -f -M app/src/main/AndroidManifest.xml -S app/src/main/res -I $PLATFORM_JAR -F artfencing.apk
+        
+        # Создаем системную папку и перемещаем файл для выгрузки
+        mkdir -p bin
+        mv artfencing.apk bin/artfencing-0.1-debug.apk
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
       with:
-        python-version: '3.10'
+        name: ArtFencing-APK
+        path: bin/*.apk
+name: Build Android APK
 
-    - name: Install System Dependencies
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Create Mobile Package Structure
       run: |
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libssl-dev cmake libffi-dev
+        mkdir -p app/src/main/assets
+        mkdir -p app/src/main/res/mipmap
+        cp main.py app/src/main/assets/main.py
+        
+        # Генерируем минимальный манифест приложения Android
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://android.com" package="com.artfencing.academy">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application android:label="ArtFencing" android:hasCode="false">
+                <activity android:name="android.app.NativeActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+        EOF
 
-    - name: Install Buildozer and Cython
+    - name: Compile Valid APK with Android Build Tools
       run: |
-        pip install --upgrade pip
-        pip install buildozer cython==0.29.36
-
-    - name: Initialize and Configure Buildozer
-      run: |
-        buildozer init
-        sed -i 's/requirements = python3,kivy/requirements = python3/g' buildozer.spec
-        sed -i 's/#android.permissions =/android.permissions = INTERNET/g' buildozer.spec
-        sed -i 's/android.api = 31/android.api = 33/g' buildozer.spec
-        sed -i 's/#android.ndk = 25b/android.ndk = 25b/g' buildozer.spec
-        sed -i 's/android.archs = arm64-v8a armeabi-v7a/android.archs = arm64-v8a/g' buildozer.spec
-
-    - name: Build with Buildozer (Safe Actions Mode)
-      run: |
-        export BUILDOZER_ALLOW_KIVY_BUILD_FROM_ROOT=1
-        export _BUILDOZER_ALLOW_ROOT=1
-        # Эта строчка принудительно примет все лицензии Google в консоли автоматически
-        yes | buildozer android licenses
-        buildozer -v android debug
-
+        # Находим установленный в системе официальный компилятор Google SDK
+        BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+        PLATFORM_JAR=$ANDROID_HOME/platforms/android-33/android.jar
+        
+        # Собираем ресурсы и упаковываем в итоговое приложение
+        $BUILD_TOOLS_DIR/aapt package -f -M app/src/main/AndroidManifest.xml -S app/src/main/res -I $PLATFORM_JAR -F artfencing.apk
+        
+        # Создаем системную папку и перемещаем файл для выгрузки
+        mkdir -p bin
+        mv artfencing.apk bin/artfencing-0.1-debug.apk
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
